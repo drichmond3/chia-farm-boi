@@ -1,8 +1,10 @@
 const PlottingService = require("./chia-plotting-service");
-const { prompt, sleep, isPositive, log, runCommand } = require("./command-line-utils");
+const { prompt, sleep, isPositive, log, runCommand, getHostname } = require("./command-line-utils");
 const { getDriveUniqueId, findTemporaryDrives, listFilesInDirectory } = require("./chia-utils");
+var nodemailer = require('nodemailer');
 
-let {PLOTTING_DELAY_IN_MINUTES, MAX_RETRY_ATTEMPTS, CORE_COUNT, MAX_THREADS_PER_SSD, KNOWN_DRIVES} = require("./config.json");
+let {PLOTTING_DELAY_IN_MINUTES, MAX_RETRY_ATTEMPTS, CORE_COUNT, MAX_THREADS_PER_SSD, KNOWN_DRIVES, MAIL_FROM_ADDRESS, MAIL_TO_ADDRESS, MAIL_PASSWORD} = require("./config.json");
+const { unmount } = require("./windows-chia-utils");
 
 const LOG_FILE = `./auto_plotter/${Date.now()}.log`;
 const service = new PlottingService();
@@ -20,6 +22,7 @@ let main = async ()=>{
 	console.log("Max concurrent threads " + MAX_CONCURRENT_THREADS);
 	service.execute(PLOTTING_DELAY_IN_MINUTES, MAX_CONCURRENT_THREADS);
   repl(); //The only thread allowed to print to std out.
+  retryThread();
 }
 
 let repl = async ()=>{
@@ -29,7 +32,7 @@ let repl = async ()=>{
     if(command == "plot"){
       let drivesFound = await driveDiscovery();
       if(!drivesFound){
-	console.log("No new drives found. Use 'status' to view ongoing drive plots");	
+        console.log("No new drives found. Use 'status' to view ongoing drive plots");
       }
     } else if(command == "status"){
       await printStatus();
@@ -80,14 +83,11 @@ let printStatus = async ()=> {
   for(drive in plotsInProgress){
     let drivePlottingData = plotsInProgress[drive];
     let logs = (await listFilesInDirectory(drivePlottingData.logDirectory)).filter(name=>name.includes(".log"));
-
     let findPhaseCount = (log)=>runCommand(`type ${log} findstr "Starting phase"`).split(/\r?\n/).length;
     let completedPhases = logs.reduce((findPhaseCount), 0);
     let remainingPhases = drivePlottingData.plotCount*4 - completedPhases;
-
     let timeSpentInMilliseconds = drivePlottingData.startTime ? Date.now() - drivePlottingData.startTime : 0;
     let timeReaminingInMilliseconds = completedPhases ? timeSpentInMilliseconds* remainingPhases / completedPhases : 0;
-
     response[drive] = {
       totalPlots: drivePlottingData.plotCount,
       timeSpentInHours: timeSpentInMilliseconds/1000/60/60,
@@ -125,11 +125,40 @@ let retryThread = async ()=>{
 					drivePlot.failureCount = drivePlot.failureCount + 1;
 				}
 			}
-			//TODO Check for completed drives. Send out email & text. Then unmount the drives.
-			//`eject ${unixDeviceFile}
+
+      if(!drivePlot.emailSent && Object.keys(drivePlot.commandsLeft) == 0){
+        completeDrivePlot(unixDeviceFile);
+      }
 		}
-		await sleep(1 * 60 * 1000);
+		await sleep(1000);
 	}
+}
+
+let completeDrivePlot = (unixDeviceFile)=>{
+  console.log("Sending an email");
+  const drivePlot = plotsInProgress[unixDeviceFile];
+  let transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: MAIL_FROM_ADDRESS,
+      pass: MAIL_PASSWORD
+    }
+  });
+
+  let mailOptions = {
+    from: MAIL_FROM_ADDRESS,
+    to: MAIL_TO_ADDRESS,
+    subject: `Plotting Notification on ${getHostname()}`,
+    text: `Drive ${unixDeviceFile} completed successfully`
+  };
+
+  transporter.sendMail(mailOptions, function(error, info){
+    if (error) {
+      log(error);
+    }
+  });
+  unmount(unixDeviceFile);
+  drivePlot.emailSent = true;
 }
 
 let getDrivesToSkip = async ()=>{
@@ -180,6 +209,7 @@ let plotToDrive = async (unixDeviceFile, commands, logDirectory, plotCount)=>{
 let buildCommandCallback = (unixDeviceFileName, commandId) => {
 	return ()=>{
 		try{
+      console.log("Success " + unixDeviceFileName +  ", " + commandId);
 			delete plotsInProgress[unixDeviceFileName].commandsLeft[commandId];	
 		} catch(e){
 			log(e)

@@ -50,6 +50,10 @@ let listFilesInDirectory = async(directory) =>{
   return [];
 }
 
+let unmount = async(drive) =>{
+  //await runCommand(`mountvol ${drive}\\ /p`);
+}
+
 function sleep(millis) {
 	return new Promise(resolve => setTimeout(resolve, millis));
 }
@@ -91,3 +95,4 @@ exports.findTemporaryDrives = findTemporaryDrives;
 exports.sleep = sleep;
 exports.getDriveUniqueId = getDriveUniqueId;
 exports.listFilesInDirectory = listFilesInDirectory;
+exports.unmount = unmount

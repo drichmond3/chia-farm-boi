@@ -1,6 +1,7 @@
 const readline = require('readline');
 const {exec} = require("child_process");
 const fs = require('fs');
+var os = require("os");
 
 function sleep(millis) {
 	return new Promise(resolve => setTimeout(resolve, millis));
@@ -55,6 +56,10 @@ function isPositive(input) {
 	return input && input.toLowerCase().includes('y');
 }
 
+function getHostname(){
+  return os.hostname();
+}
+
 const LOG_FILE = `auto_plotter/${Date.now()}.log`;
 
 exports.sleep = sleep;
@@ -62,3 +67,4 @@ exports.prompt = prompt;
 exports.isPositive = isPositive;
 exports.log = (message)=>print(LOG_FILE, message);
 exports.runCommand = runCommand;
+exports.getHostname = getHostname;

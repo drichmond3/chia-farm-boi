@@ -26,11 +26,11 @@ module.exports = class PlottingService {
 	}
 
 	async mockExecuteSingleCommand(command){
-		log("Executing " + command);
+		log("In Test Mode: Executing " + command);
 		console.log(command);
 		return new Promise((resolve, reject)=>{
 			exec(command,{},(error, stdout, stderr) => {
-				sleep(5 * 60 * 1000).then(resolve);
+				sleep(1000).then(resolve);
 			});
 		});
 	}
@@ -84,7 +84,7 @@ module.exports = class PlottingService {
 			let commandsAndLogs = await buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD);
 			commandsAndLogsPerDrive[driveData.drive] = commandsAndLogs;
 		}
-		//console.log(commandsAndLogsPerDrive);
+		console.log(commandsAndLogsPerDrive);
 		return commandsAndLogsPerDrive;
 	}
 }
