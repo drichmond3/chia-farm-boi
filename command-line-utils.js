@@ -55,21 +55,10 @@ function isPositive(input) {
 	return input && input.toLowerCase().includes('y');
 }
 
-
-let listFilesInDirectory = async(directory) =>{
-  let rawDirectories = await runCommand("dir /b");
-  if(rawDirectories){
-    return rawDirectories.split(/\r?\n/);
-  }
-  return [];
-}
-
-
 const LOG_FILE = `auto_plotter/${Date.now()}.log`;
 
 exports.sleep = sleep;
 exports.prompt = prompt;
 exports.isPositive = isPositive;
 exports.log = (message)=>print(LOG_FILE, message);
-exports.listFilesInDirectory = listFilesInDirectory;
 exports.runCommand = runCommand;

@@ -42,6 +42,14 @@ let getDriveUniqueId = async (unixDeviceFileName) =>{
 	});
 }
 
+let listFilesInDirectory = async(directory) =>{
+  let rawDirectories = await runCommand("dir /b");
+  if(rawDirectories){
+    return rawDirectories.split(/\r?\n/);
+  }
+  return [];
+}
+
 function sleep(millis) {
 	return new Promise(resolve => setTimeout(resolve, millis));
 }
@@ -82,3 +90,4 @@ exports.findPlottableDrives = findPlottableDrives;
 exports.findTemporaryDrives = findTemporaryDrives;
 exports.sleep = sleep;
 exports.getDriveUniqueId = getDriveUniqueId;
+exports.listFilesInDirectory = listFilesInDirectory;

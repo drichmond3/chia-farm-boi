@@ -1,5 +1,5 @@
 const buildPlottingCommandsForDrive = require ("./chia-plot-delegation");
-const {findPlottableDrives, findTemporaryDrives, sleep} = require('./windows-chia-utils');
+const {findPlottableDrives, findTemporaryDrives, sleep} = require('./chia-utils');
 const { exec } = require('child_process');
 const { log } = require('./command-line-utils');
 
@@ -25,18 +25,17 @@ module.exports = class PlottingService {
 		});
 	}
 
-  async mockExecuteSingleCommand(command){
-    log("Executing " + command);
-    return new Promise((resolve, reject)=>{
+	async mockExecuteSingleCommand(command){
+		log("Executing " + command);
+		console.log(command);
+		return new Promise((resolve, reject)=>{
 			exec(command,{},(error, stdout, stderr) => {
 				sleep(5 * 60 * 1000).then(resolve);
 			});
 		});
-
-  }
+	}
 
 	async execute( delayInMinutes, maxConcurrentThreads) {
-    console.log("MAX THREADS" + maxConcurrentThreads);
 		this._running = true;
 		let sleepTimeInMilliseconds = delayInMinutes * 60 * 1000;
 		while(this._running) {
@@ -47,10 +46,10 @@ module.exports = class PlottingService {
 			let commandData = this._commandsToExecute.splice(0,1)[0];
 			let command = commandData.command;
 
-			this.executeSingleCommand(command)
+			this.mockExecuteSingleCommand(command)
 				.then(commandData.success)
 				.catch(commandData.failure)
-      commandData.start();
+			commandData.start();
 			this._activeThreadCount++;
 			await sleep(sleepTimeInMilliseconds);
 		}
@@ -59,7 +58,7 @@ module.exports = class PlottingService {
 	addCommandToExecute(command, start, successCallback, failureCallback){
 		this._commandsToExecute.push({
 			command,
-      start,
+			start,
 			success : (stdout)=>{
 				log("Thread completed");
 				this._activeThreadCount--;
@@ -85,7 +84,7 @@ module.exports = class PlottingService {
 			let commandsAndLogs = await buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD);
 			commandsAndLogsPerDrive[driveData.drive] = commandsAndLogs;
 		}
-    //console.log(commandsAndLogsPerDrive);
+		//console.log(commandsAndLogsPerDrive);
 		return commandsAndLogsPerDrive;
 	}
 }
