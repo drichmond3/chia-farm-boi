@@ -66,7 +66,7 @@ module.exports = class PlottingService {
 			},
 			failure : (error, stderror)=>{ 
 				log("Thread errored out!");
-				log(error);
+				console.log(error);
 				log(stderror);
 				this._activeThreadCount--;
 				failureCallback(error, stderror)

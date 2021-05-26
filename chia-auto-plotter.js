@@ -107,7 +107,6 @@ let updateConfig = async ()=>{
 let retryThread = async ()=>{
 
 	while(true){
-		log("Top of retry thread");
 		for(unixDeviceFile in plotsInProgress){
 			const drivePlot = plotsInProgress[unixDeviceFile];
 			if(drivePlot.failureFlag && drivePlot.commandsLeft.length == 0){
@@ -226,6 +225,7 @@ let buildCommandFailureCallback = (unixDeviceFileName, commandId) => {
 
 			log("!!!!!!!!!Unexpected Error!!!!!!!!!");
 			log("The following command has failed. System will retry once remaining plots are finished" + command);
+      console.log(error);
 		} catch(e){
 			log(e);
 		}
