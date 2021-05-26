@@ -46,7 +46,7 @@ module.exports = class PlottingService {
 			let commandData = this._commandsToExecute.splice(0,1)[0];
 			let command = commandData.command;
 
-			this.mockExecuteSingleCommand(command)
+			this.executeSingleCommand(command)
 				.then(commandData.success)
 				.catch(commandData.failure)
 			commandData.start();
@@ -84,7 +84,6 @@ module.exports = class PlottingService {
 			let commandsAndLogs = await buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD);
 			commandsAndLogsPerDrive[driveData.drive] = commandsAndLogs;
 		}
-		console.log(commandsAndLogsPerDrive);
 		return commandsAndLogsPerDrive;
 	}
 }

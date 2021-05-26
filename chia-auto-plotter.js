@@ -135,7 +135,7 @@ let retryThread = async ()=>{
 }
 
 let completeDrivePlot = (unixDeviceFile)=>{
-  console.log("Sending an email");
+  console.log("Sending the notification email");
   const drivePlot = plotsInProgress[unixDeviceFile];
   let transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -209,7 +209,6 @@ let plotToDrive = async (unixDeviceFile, commands, logDirectory, plotCount)=>{
 let buildCommandCallback = (unixDeviceFileName, commandId) => {
 	return ()=>{
 		try{
-      console.log("Success " + unixDeviceFileName +  ", " + commandId);
 			delete plotsInProgress[unixDeviceFileName].commandsLeft[commandId];	
 		} catch(e){
 			log(e)

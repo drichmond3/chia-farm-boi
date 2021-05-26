@@ -51,8 +51,6 @@ let generatePlotterCommands = async (options)=>{
     const PLOT_SIZE = .10887742;
     const rawPlotCount = hardDriveSpace * 1.0/PLOT_SIZE; //Remember, 101.4 GiB = 108.87GB
     const plotCount = Math.floor(rawPlotCount);
-
-    //console.log(options);
     return {
       commands: await _generatePlotterCommands({maxConcurrency, plotCount, temporaryDrive, destinationDrive, logDirectory}),
       plotCount: plotCount
