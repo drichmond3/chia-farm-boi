@@ -66,12 +66,11 @@ let driveDiscovery = async ()=> {
 	let drivesToSkip = await getDrivesToSkip();
 	let commandsByPlottableDrives = await service.buildPlotCommandsForAvailableDrives(drivesToSkip, MAX_THREADS_PER_SSD);
 	if(commandsByPlottableDrives){
-		for(unixDeviceFile in commandsByPlottableDrives){
+		for(let unixDeviceFile in commandsByPlottableDrives){
 			let {commands, logDirectory, plotCount} = commandsByPlottableDrives[unixDeviceFile];
 			let resp = await prompt(`New Drive ${unixDeviceFile} found. Do you want to plot here?`,PLOT_QUESTION_TIMER,'y');
 			if(isPositive(resp)){
 				await plotToDrive(unixDeviceFile, commands, logDirectory, plotCount);
-        console.log("Logs found " + logDirectory);
 			}
 		}
 	}
@@ -80,7 +79,7 @@ let driveDiscovery = async ()=> {
 
 let printStatus = async ()=> {
   let response = {};
-  for(drive in plotsInProgress){
+  for(let drive in plotsInProgress){
     let drivePlottingData = plotsInProgress[drive];
     let logs = (await listFilesInDirectory(drivePlottingData.logDirectory)).filter(name=>name.includes(".log"));
     let findPhaseCount = (log)=>runCommand(`type ${log} findstr "Starting phase"`).split(/\r?\n/).length;
@@ -107,7 +106,7 @@ let updateConfig = async ()=>{
 let retryThread = async ()=>{
 
 	while(true){
-		for(unixDeviceFile in plotsInProgress){
+		for(let unixDeviceFile in plotsInProgress){
 			const drivePlot = plotsInProgress[unixDeviceFile];
 			if(drivePlot.failureFlag && drivePlot.commandsLeft.length == 0){
 				if(drivePlot.failureCount >= MAX_RETRY_ATTEMPTS){
@@ -162,7 +161,7 @@ let completeDrivePlot = (unixDeviceFile)=>{
 
 let getDrivesToSkip = async ()=>{
 	let driveToUniqueId = {};
-	for(unixDeviceFile in plotsInProgress){
+	for(let unixDeviceFile in plotsInProgress){
 		driveToUniqueId[unixDeviceFile] = await getDriveUniqueId(unixDeviceFile);
 	}
 

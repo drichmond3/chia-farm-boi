@@ -36,7 +36,7 @@ let buildAlternatingSSDCommands = (commandsAndPlotsBySSD, logDirectory)=> {
   const plotCount = Object.keys(commandsAndPlotsBySSD).reduce((total,ssd)=>commandsAndPlotsBySSD[ssd].plotCount + total, 0);
 	while(commands.length != lastSize){
 		lastSize = commands.length;
-		for(ssdIndex in commandsAndPlotsBySSD){
+		for(let ssdIndex in commandsAndPlotsBySSD){
 			commandsAndPlotsBySSD[ssdIndex].commands.length &&
 			commands.push(commandsAndPlotsBySSD[ssdIndex].commands.splice(0,1)[0]);
   	}
