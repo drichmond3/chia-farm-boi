@@ -89,6 +89,7 @@ let printStatus = async ()=> {
     let timeReaminingInMilliseconds = completedPhases ? timeSpentInMilliseconds* remainingPhases / completedPhases : 0;
     response[drive] = {
       totalPlots: drivePlottingData.plotCount,
+      completedPlots: completedPhases/4,
       timeSpentInHours: timeSpentInMilliseconds/1000/60/60,
       timeRemaining: timeReaminingInMilliseconds/1000/60/60,
     }

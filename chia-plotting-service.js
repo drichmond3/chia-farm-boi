@@ -13,7 +13,6 @@ module.exports = class PlottingService {
 	}
 
 	async executeSingleCommand (command){
-		log("Executing " + command);
 		return new Promise((resolve, reject)=>{
 			exec(command,{},(error, stdout, stderr) => {
 				if(error){
