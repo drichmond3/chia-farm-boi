@@ -1,7 +1,8 @@
 const plotter = require("./chia-plotter.js");
+const path = require('path');
 
-let buildPlottingCommandsForDrive = async(driveData, ssds, MAX_THREADS_PER_SSD) =>{
-  const logDirectory = `logs/${Date.now()}`;
+let buildPlottingCommandsForDrive = async(driveData, ssds, MAX_THREADS_PER_SSD, logBaseDirectory) =>{
+  const logDirectory = `${logBaseDirectory}${path.sep}${Date.now()}`;
 	let commandsAndPlotsBySSD = await _buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD, logDirectory);
   let nextStep =  buildAlternatingSSDCommands(commandsAndPlotsBySSD, logDirectory);
   return nextStep;
@@ -23,7 +24,7 @@ let _buildPlottingCommandsForDrive = async (driveData, ssds, MAX_THREADS_PER_SSD
 			temporaryDrive: ssd.location,
 			destinationDrive: driveData.location,
 			delayInMinutes: 30,
-      logDirectory
+			logDirectory
 		});
 		commandsAndLogsBySSD[ssdIndex] = {commands, plotCount};
 	}

@@ -73,14 +73,14 @@ module.exports = class PlottingService {
 		});
 	}
 
-	async buildPlotCommandsForAvailableDrives(drivesToIgnore, MAX_THREADS_PER_SSD){
+	async buildPlotCommandsForAvailableDrives(drivesToIgnore, MAX_THREADS_PER_SSD, LOG_DIRECTORY){
 		const plottableDrives = await findPlottableDrives(drivesToIgnore);
 		const ssds = await findTemporaryDrives();
 	
 		let commandsAndLogsPerDrive = {};
 		for(let driveDataIndex in plottableDrives){
 			const driveData = plottableDrives[driveDataIndex];
-			let commandsAndLogs = await buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD);
+			let commandsAndLogs = await buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD, LOG_DIRECTORY);
 			commandsAndLogsPerDrive[driveData.drive] = commandsAndLogs;
 		}
 		return commandsAndLogsPerDrive;

@@ -1,12 +1,12 @@
 const PlottingService = require("./chia-plotting-service");
 const { prompt, sleep, isPositive, log, runCommand, getHostname } = require("./command-line-utils");
-const { getDriveUniqueId, findTemporaryDrives, listFilesInDirectory } = require("./chia-utils");
+const { getDriveUniqueId, findTemporaryDrives, listFilesInDirectory, mkdir } = require("./chia-utils");
 var nodemailer = require('nodemailer');
 
-let {PLOTTING_DELAY_IN_MINUTES, MAX_RETRY_ATTEMPTS, CORE_COUNT, MAX_THREADS_PER_SSD, KNOWN_DRIVES, MAIL_FROM_ADDRESS, MAIL_TO_ADDRESS, MAIL_PASSWORD} = require("./config.json");
+let {PLOTTING_DELAY_IN_MINUTES, MAX_RETRY_ATTEMPTS, CORE_COUNT, MAX_THREADS_PER_SSD, KNOWN_DRIVES, MAIL_FROM_ADDRESS, MAIL_TO_ADDRESS, MAIL_PASSWORD, LOG_DIRECTORY} = require("./config.json");
 const { unmount } = require("./windows-chia-utils");
 
-const LOG_FILE = `./auto_plotter/${Date.now()}.log`;
+const LOG_FILE = `${LOG_DIRECTORY}${Date.now()}.log`;
 const service = new PlottingService();
 
 let PLOT_QUESTION_TIMER = undefined;
@@ -64,7 +64,7 @@ let autoDiscoverRepl = async ()=>{
 }
 let driveDiscovery = async ()=> {
 	let drivesToSkip = await getDrivesToSkip();
-	let commandsByPlottableDrives = await service.buildPlotCommandsForAvailableDrives(drivesToSkip, MAX_THREADS_PER_SSD);
+	let commandsByPlottableDrives = await service.buildPlotCommandsForAvailableDrives(drivesToSkip, MAX_THREADS_PER_SSD, LOG_DIRECTORY);
 	if(commandsByPlottableDrives){
 		for(let unixDeviceFile in commandsByPlottableDrives){
 			let {commands, logDirectory, plotCount} = commandsByPlottableDrives[unixDeviceFile];
@@ -173,6 +173,8 @@ let getDrivesToSkip = async ()=>{
 
 let plotToDrive = async (unixDeviceFile, commands, logDirectory, plotCount)=>{
 	try{
+		await mkdir(logDirectory);
+
 		let driveUniqueId = await getDriveUniqueId(unixDeviceFile);
 		plotsInProgress[unixDeviceFile] = plotsInProgress[unixDeviceFile] || {
 			uniqueId: driveUniqueId,
