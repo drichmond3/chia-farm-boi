@@ -1,88 +1,58 @@
 const buildPlottingCommandsForDrive = require ("./chia-plot-delegation");
-const {findPlottableDrives, findTemporaryDrives, sleep} = require('./chia-utils');
+const {findPlottableDrives, sleep, generatePlotCommand} = require('./chia-utils');
 const { exec } = require('child_process');
 const { log } = require('./command-line-utils');
+const SSDManager = require('./ssd-manager');
 
 const KNOWN_DRIVES = ['/dev/sdb2', '/dev/sdb1'];
+const PLOT_SIZE = .1089 //measured in terabytes
 
 module.exports = class PlottingService {
-	constructor(){
-		this._commandsToExecute = []; //{command:"bla bla", success:()=>{}, failure:()=>{}}
+	constructor(ssds){
 		this._running = false;
-		this._activeThreadCount = 0;
+		this._ssds = ssds;
+		this._ssdManagers = ssds.map(ssd=> new SSDManager(ssd.location, ssd.freeSpace/PLOT_SIZE));
+		this._destinationDrives = [];
+		this._executionId = 0;
 	}
 
-	async executeSingleCommand (command){
-		return new Promise((resolve, reject)=>{
-			exec(command,{},(error, stdout, stderr) => {
-				if(error){
-					//let caller know so they can retry if they want.
-					reject({error, stderr});
-				}
-				resolve(stdout);
-			});
-		});
-	}
-
-	async mockExecuteSingleCommand(command){
-		log("In Test Mode: Executing " + command);
-		console.log(command);
-		return new Promise((resolve, reject)=>{
-			exec(command,{},(error, stdout, stderr) => {
-				sleep(1000).then(resolve);
-			});
-		});
-	}
-
-	async execute( delayInMinutes, maxConcurrentThreads) {
+	async execute(delayInMinutes, cpuThreadLimit) {
 		this._running = true;
 		let sleepTimeInMilliseconds = delayInMinutes * 60 * 1000;
 		while(this._running) {
-			if(this._commandsToExecute.length <= 0 || this._activeThreadCount >= maxConcurrentThreads){
-				await sleep(10000);
+			await sleep(10*1000);
+			let ssdManager = Object.keys(this._ssdManagers).find(ssdLocation=>(
+				this._ssdManagers[ssdLocation].isFull;
+			));
+			let destination = this._destinationDrives.find(this._getProjectedSpace(drive.location) > 150);
+			if(!ssdManager || !destination){
 				continue;
 			}
-			let commandData = this._commandsToExecute.splice(0,1)[0];
-			let command = commandData.command;
 
-			this.executeSingleCommand(command)
-				.then(commandData.success)
-				.catch(commandData.failure)
-			commandData.start();
-			this._activeThreadCount++;
+			let executionId = this._getExecutionId();
+			let logFile = destination.logDirectory + "/" + executionId + ".log";
+			ssdManager.plot(destination.location, logFile, executionId); 
+			
 			await sleep(sleepTimeInMilliseconds);
 		}
 	}
 
-	addCommandToExecute(command, start, successCallback, failureCallback){
-		this._commandsToExecute.push({
-			command,
-			start,
-			success : (stdout)=>{
-				log("Thread completed");
-				this._activeThreadCount--;
-				successCallback(stdout)
-			},
-			failure : (error, stderror)=>{ 
-				log("Thread errored out!");
-				console.log(error);
-				log(stderror);
-				this._activeThreadCount--;
-				failureCallback(error, stderror)
-			}
-		});
+	_getExecutionId(){
+		this._executionId++;
+		return this._executionId;
 	}
 
-	async buildPlotCommandsForAvailableDrives(drivesToIgnore, MAX_THREADS_PER_SSD){
-		const plottableDrives = await findPlottableDrives(drivesToIgnore);
-		const ssds = await findTemporaryDrives();
-	
-		let commandsAndLogsPerDrive = {};
-		for(let driveDataIndex in plottableDrives){
-			const driveData = plottableDrives[driveDataIndex];
-			let commandsAndLogs = await buildPlottingCommandsForDrive(driveData, ssds, MAX_THREADS_PER_SSD);
-			commandsAndLogsPerDrive[driveData.drive] = commandsAndLogs;
+	_getProjectedSpace(location){
+		let projectedSpace = getDriveFreeSpace(location) - this._ssdManagers.reduce((total,manager)=>total+manager.getThreadCountForDrive(location),0)*PLOT_SIZE*1000;
+		console.log("Projected freespace for drive " + location + " is " + projectedSpace + " GB");
+	}
+
+	addDestinationDrive(location, logDirectory){
+		if(!(location in this._destinationDrives)){
+			this._destinationDrives.push({location, logDirectory}); 
 		}
-		return commandsAndLogsPerDrive;
+		else {
+			log("Ignoring duplicate destination directory " + location);
+		}
 	}
 }

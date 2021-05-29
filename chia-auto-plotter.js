@@ -1,9 +1,9 @@
 const PlottingService = require("./chia-plotting-service");
-const { prompt, sleep, isPositive, log, runCommand, getHostname } = require("./command-line-utils");
-const { getDriveUniqueId, findTemporaryDrives, listFilesInDirectory } = require("./chia-utils");
+const { prompt, sleep, isPositive, log, runCommand, getHostname, uuid } = require("./command-line-utils");
+const { getDriveUniqueId, listFilesInDirectory } = require("./chia-utils");
 var nodemailer = require('nodemailer');
 
-let {PLOTTING_DELAY_IN_MINUTES, MAX_RETRY_ATTEMPTS, CORE_COUNT, MAX_THREADS_PER_SSD, KNOWN_DRIVES, MAIL_FROM_ADDRESS, MAIL_TO_ADDRESS, MAIL_PASSWORD} = require("./config.json");
+let {PLOTTING_DELAY_IN_MINUTES, MAX_RETRY_ATTEMPTS, CORE_COUNT, MAX_THREADS_PER_SSD, KNOWN_DRIVES, MAIL_FROM_ADDRESS, MAIL_TO_ADDRESS, MAIL_PASSWORD, TEMPORARY_DRIVES} = require("./config.json");
 const { unmount } = require("./windows-chia-utils");
 
 const LOG_FILE = `./auto_plotter/${Date.now()}.log`;
@@ -13,8 +13,10 @@ let PLOT_QUESTION_TIMER = undefined;
 
 let plotsInProgress = {};
 
+//TODO Rewrite to work with new service
+
 let main = async ()=>{
-	const ssdThreads = (await findTemporaryDrives()).reduce((total,drive)=>total+Math.min(MAX_THREADS_PER_SSD, drive.freeSpace/.250),0);
+	const ssdThreads = TEMPORARY_DRIVES.reduce((total,drive)=>total+Math.min(MAX_THREADS_PER_SSD, drive.freeSpace/.250),0);
 	const MAX_CONCURRENT_THREADS = Math.min(CORE_COUNT, ssdThreads);
 
 	log("Beginning chia auto plotter");
@@ -173,6 +175,8 @@ let getDrivesToSkip = async ()=>{
 
 let plotToDrive = async (unixDeviceFile, commands, logDirectory, plotCount)=>{
 	try{
+		log("Commands for " + unixDeviceFile);
+		commands.forEach((command)=>log("----------" + command));
 		let driveUniqueId = await getDriveUniqueId(unixDeviceFile);
 		plotsInProgress[unixDeviceFile] = plotsInProgress[unixDeviceFile] || {
 			uniqueId: driveUniqueId,
@@ -233,11 +237,6 @@ let buildCommandFailureCallback = (unixDeviceFileName, commandId) => {
 
 }
 
-function uuid() {
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-		var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-		return v.toString(16);
-	});
 }
 
 

@@ -2,3 +2,4 @@ config.json
 auto_plotter/
 node_modules/
 logs/
+*.swp

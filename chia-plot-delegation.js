@@ -1,4 +1,5 @@
 const plotter = require("./chia-plotter.js");
+const {log} = require("./chia-utils");
 
 let buildPlottingCommandsForDrive = async(driveData, ssds, MAX_THREADS_PER_SSD) =>{
   const logDirectory = `logs/${Date.now()}`;
@@ -8,6 +9,7 @@ let buildPlottingCommandsForDrive = async(driveData, ssds, MAX_THREADS_PER_SSD) 
 }
 let _buildPlottingCommandsForDrive = async (driveData, ssds, MAX_THREADS_PER_SSD, logDirectory) => {
 	//only consider the maximum space that can be used with our max thread limitation.
+	log("Building commands for drive " + driveData.location);
 	ssds.forEach((ssd)=>ssd.freeSpace = Math.floor(MAX_THREADS_PER_SSD*.25, ssd.freeSpace));
 	let commandsAndLogsBySSD = {};
 	let totalSpaceToFill = driveData.freeSpace.replace(/[^\d.-]/g,'')/1000;
@@ -17,13 +19,13 @@ let _buildPlottingCommandsForDrive = async (driveData, ssds, MAX_THREADS_PER_SSD
 		let ssd = ssds[ssdIndex];
 		let maxThreads = Math.floor(MAX_THREADS_PER_SSD, ssd.freeSpace/.25);
 		let sectionSpace = totalSpaceToFill * (ssd.freeSpace/totalSSDSpace);
+	  	console.log(`--------SSD ${ssd} is responsible for filling ${sectionSpace} TB, and will run ${maxThreads} threads in parallel`);
 		const {commands, plotCount} = await plotter({
 			hardDriveSpace: sectionSpace,
 			maxConcurrency: maxThreads,
 			temporaryDrive: ssd.location,
 			destinationDrive: driveData.location,
-			delayInMinutes: 30,
-      logDirectory
+     			logDirectory
 		});
 		commandsAndLogsBySSD[ssdIndex] = {commands, plotCount};
 	}

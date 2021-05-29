@@ -13,32 +13,30 @@ let findPlottableDrives = async (drivesToIgnore)=>{
 }
 
 let _getDriveData = async ()=>{
-  let command = "wmic Volume Get DeviceID, DriveLetter, FreeSpace";
-  let rawData = await runCommand(command);
-  let driveByLine = rawData.split(/\r?\n/);
-  driveByLine.splice(0,1);
-  let parsedDriveData = driveByLine.map(line=>line.split(/\s+/));
-  parsedDriveData = parsedDriveData.filter(data=>data.length >= 3 && data[0] && data[1] && data[2])
-  return parsedDriveData.map(data=>{return {
-    uuid: data[0].trim(),
-    location: data[1].trim(),
-    freeSpace: (data[2]/1024/1024/1024) + "" //BYTE to GIGABYTE
-  }})
+	let command = "wmic Volume Get DeviceID, DriveLetter, FreeSpace";
+	let rawData = await runCommand(command);
+	let driveByLine = rawData.split(/\r?\n/);
+	driveByLine.splice(0,1);
+	let parsedDriveData = driveByLine.map(line=>line.split(/\s+/));
+	parsedDriveData = parsedDriveData.filter(data=>data.length >= 3 && data[0] && data[1] && data[2])
+	return parsedDriveData.map(data=>{return {
+		uuid: data[0].trim(),
+		location: data[1].trim(),
+		freeSpace: (data[2]/1024/1024/1024) + "" //BYTE to GIGABYTE
+	}})
 }
 
-/**
- * Use sudo fdisk -l | grep /dev/nvme
- * to find more drives
- */
-let findTemporaryDrives = async ()=>{
-	return [
-		{location:"E:", freeSpace:3.6}];
-}
-
-let getDriveUniqueId = async (unixDeviceFileName) =>{
+let getDriveFreeSpace = async (driveLocation){
 	return new Promise(async (resolve, reject)=>{
-		let response = (await _getDriveData()).filter(drive=>drive.location == unixDeviceFileName);
-    resolve(response[0].uuid);
+		let driveData = (await _getDriveData()).filter(drive=>drive.location == driveLocation);
+		resolve(driveData[0].freeSpace);
+	});
+}
+
+let getDriveUniqueId = async (driveLocation) =>{
+	return new Promise(async (resolve, reject)=>{
+		let driveData = (await _getDriveData()).filter(drive=>drive.location == driveLocation);
+		resolve(driveData[0].uuid);
 	});
 }
 
@@ -99,7 +97,7 @@ function sleep(millis) {
  */
 
 exports.findPlottableDrives = findPlottableDrives;
-exports.findTemporaryDrives = findTemporaryDrives;
+exports.getDriveFreeSpace = getDriveFreeSpace;
 exports.sleep = sleep;
 exports.getDriveUniqueId = getDriveUniqueId;
 exports.listFilesInDirectory = listFilesInDirectory;

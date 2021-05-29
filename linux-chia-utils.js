@@ -3,6 +3,12 @@ const {log} = require("./command-line-utils");
 const {runCommand} = require("./command-line-utils");
 
 let findPlottableDrives = async (drivesToIgnore)=>{
+	let parsedDriveData = await getDriveData();
+	let response = parsedDriveData.filter(data=>!drivesToIgnore.includes(data.drive));
+	return response;
+}
+
+let getDriveData = async ()=>{
 	const rawDriveList = await new Promise((resolve, reject)=>{
 		const command = `df -B G | grep "/dev/sd"`
         	exec(command,{},(error, stdout, stderr) => {
@@ -16,20 +22,7 @@ let findPlottableDrives = async (drivesToIgnore)=>{
         	freeSpace: data[3],
         	location: data.splice(5).join(" ")
 	}));
-
-	let response = parsedDriveData.filter(data=>!drivesToIgnore.includes(data.drive));
-	return response;
-}
-
-/**
- * Use sudo fdisk -l | grep /dev/nvme
- * to find more drives
- */
-let findTemporaryDrives = async ()=>{
-	return [
-		{location:"/mnt/nvme0", freeSpace:3.40},
-		{location:"/mnt/nvme1", freeSpace:0.87},
-                {location:"/mnt/nvme2", freeSpace:1.80}];
+	return parsedDriveData;
 }
 
 let getDriveUniqueId = async (unixDeviceFileName) =>{
@@ -40,6 +33,12 @@ let getDriveUniqueId = async (unixDeviceFileName) =>{
 		let uuid = uuidString.split("=")[1].replace('"',"").trim();
 		resolve(uuid);
 	});
+}
+
+let getDriveFreeSpace = async (driveLocation) =>{
+	let driveData = await getDriveData().filter(drive=>drive.location == driveLocation);
+	console.log("Free space on " + driveLocation + " is " + driveData.freeSpace + " GB");
+	return driveData.freeSpace;
 }
 
 let listFilesInDirectory = async(directory) =>{
@@ -55,9 +54,9 @@ let unmount = async(unixDeviceFile) =>{
 }
 
 let generatePlotCommand = (options)=>{
-  let {temporaryDrive, destinationDrive, logDirectory, repeatCount, threadCount} = options
-  let command = `mkdir -p ${logDirectory} && cd /home/darrien/chia-blockchain/ && . ./activate && chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n ${repeatCount} -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
-  command += ` >> ${logDirectory}${temporaryDrive.substring(temporaryDrive.lastIndexOf("/")) + '_' + threadCount}.log`;
+  let {temporaryDrive, destinationDrive, logFile, executionId} = options
+  let command = `mkdir -p /home/darrien/chia-blockchain/${logDirectory} && cd /home/darrien/chia-blockchain/ && . ./activate && chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n 1 -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
+  command += ` >> ${logFile}`;
   return command;
 }
 
@@ -98,9 +97,9 @@ function sleep(millis) {
  */
 
 exports.findPlottableDrives = findPlottableDrives;
-exports.findTemporaryDrives = findTemporaryDrives;
 exports.listFilesInDirectory = listFilesInDirectory;
 exports.sleep = sleep;
 exports.getDriveUniqueId = getDriveUniqueId;
 exports.unmount = unmount;
 exports.generatePlotCommand = generatePlotCommand;
+exports.getDriveFreeSpace = getDriveFreeSpace;
