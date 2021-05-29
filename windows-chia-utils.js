@@ -52,10 +52,14 @@ let unmount = async(drive) =>{
   //await runCommand(`mountvol ${drive}\\ /p`);
 }
 
+let mkdir = async (directory) =>{
+	await runCommand(`md ${directory}`).catch((e)=>{log(`Failed to create directory ${directory}`)});
+}
+
 let generatePlotCommand = (options)=>{
   let {temporaryDrive, destinationDrive, logDirectory, repeatCount, threadCount} = options
   logDirectory = logDirectory.replace("/","\\").replace(":","");
-  let command = `md ${logDirectory} 2>NUL && chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n ${repeatCount} -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
+  let command = `chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n ${repeatCount} -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
   command += ` >> ${logDirectory}\\${temporaryDrive.substring(temporaryDrive.lastIndexOf("/")).replace(":","") + '_' + threadCount}.log`;
   return command;
 }
@@ -103,3 +107,4 @@ exports.getDriveUniqueId = getDriveUniqueId;
 exports.listFilesInDirectory = listFilesInDirectory;
 exports.unmount = unmount
 exports.generatePlotCommand = generatePlotCommand;
+exports.mkdir = mkdir;
