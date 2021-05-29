@@ -9,17 +9,21 @@ module.exports = class SSDManager{
 		this._maxThreads = maxThreads;
 	}
 
-	async plot(destinationDrive, logFile, id){
+	async plot(destinationDrive, logFile, id, callbacks){
+		let command = undefined;
 		try{
 			this._inProgress[destinationDrive] = this._inProgress[destinationDrive] || {};
 			this._inProgress[destinationDrive].push(id);
-			let command = generatePlotCommand({temporaryDrive : ssd, destinationDrive, logFile});
+			command = generatePlotCommand({temporaryDrive : ssd, destinationDrive, logFile});
 			await runCommand(command)
+			callbacks.success();
 		}
 		catch(e){
 			log("Plotting to drive " + destinationDrive + " from ssd " + ssd + " failed.");
+			log("Failed to execute command " + command);
 			log(e.message);
 			log(e.stackTrace);
+			callbacks.failure();
 		}
 		finally{
 			this._inProgress.splice(this._inProgress.indexOf(id), 1);	

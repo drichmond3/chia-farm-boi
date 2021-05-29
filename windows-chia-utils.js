@@ -52,8 +52,9 @@ let unmount = async(drive) =>{
   //await runCommand(`mountvol ${drive}\\ /p`);
 }
 
-let mkdir = async (directory) =>{
+let createDirectory = async (directory) =>{
 	await runCommand(`md ${directory}`).catch((e)=>{log(`Failed to create directory ${directory}`)});
+	await runCommand(`rmdir /S ${directory}`);
 }
 
 let generatePlotCommand = (options)=>{
@@ -107,4 +108,4 @@ exports.getDriveUniqueId = getDriveUniqueId;
 exports.listFilesInDirectory = listFilesInDirectory;
 exports.unmount = unmount
 exports.generatePlotCommand = generatePlotCommand;
-exports.mkdir = mkdir;
+exports.createDirectory = createDirectory;
