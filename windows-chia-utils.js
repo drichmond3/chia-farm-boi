@@ -26,7 +26,7 @@ let _getDriveData = async ()=>{
 	}})
 }
 
-let getDriveFreeSpace = async (driveLocation){
+let getDriveFreeSpace = async (driveLocation) =>{
 	return new Promise(async (resolve, reject)=>{
 		let driveData = (await _getDriveData()).filter(drive=>drive.location == driveLocation);
 		resolve(driveData[0].freeSpace);

@@ -37,7 +37,7 @@ function prompt(query, timeout, defaultValue) {
 
 let runCommand = async (command)=>{
   return new Promise((resolve, reject)=>{
-		exec(command, {}, (error, stdout, stderr) => {
+		exec(command, {uid:1000}, (error, stdout, stderr) => {
 			if(error) {
 				reject(error);
 			}
@@ -65,6 +65,7 @@ function uuid() {
 		var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
 		return v.toString(16);
 	});
+}
 
 const LOG_FILE = `auto_plotter/${Date.now()}.log`;
 
@@ -74,3 +75,4 @@ exports.isPositive = isPositive;
 exports.log = (message)=>print(LOG_FILE, message);
 exports.runCommand = runCommand;
 exports.getHostname = getHostname;
+

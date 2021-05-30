@@ -36,13 +36,18 @@ let getDriveUniqueId = async (unixDeviceFileName) =>{
 }
 
 let getDriveFreeSpace = async (driveLocation) =>{
-	let driveData = await getDriveData().filter(drive=>drive.location == driveLocation);
-	console.log("Free space on " + driveLocation + " is " + driveData.freeSpace + " GB");
-	return parseInt(driveData.freeSpace) || undefined;
+	let driveData = (await getDriveData()).filter(drive=>drive.location == driveLocation)[0];
+	let cleanedSpaceStr = (driveData && driveData.freeSpace) ? driveData.freeSpace.replace(/[^0-9.]/g, '') : undefined;
+	return parseInt(cleanedSpaceStr);
 }
 
 let countCompletedPlots = async(directory) =>{
-  let logs = await runCommand(`cat "${directory}/* | grep "Copied final file from"`);
+    let logs = "";
+  try{
+    logs = await runCommand(`grep -r "Copied final file from" "${directory}/"`);
+  } catch(e){
+    logs = "";
+  }
   if(logs){
     return rawDirectories.split(/\r?\n/).length;
   }
@@ -51,12 +56,9 @@ let countCompletedPlots = async(directory) =>{
 
 let createDirectory = async(directory) => {
 	try{
-		await runCommand(`rm -r ${directory}/*`);
+		await runCommand(`rm -r "${directory}"/*`);
 	} catch(e){}
-	await runCommand(`mkdir -p ${directory}`);
-}
-
-let cleanDirectory = async(directory) => {
+	await runCommand(`mkdir -p "${directory}"`);
 }
 
 let unmount = async(unixDeviceFile) =>{
@@ -65,8 +67,8 @@ let unmount = async(unixDeviceFile) =>{
 
 let generatePlotCommand = (options)=>{
   let {temporaryDrive, destinationDrive, logFile, executionId} = options
-  let command = "cd /home/darrien/chia-blockchain/ && . ./activate && chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n 1 -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
-  command += ` >> ${logFile}`;
+  let command = `cd /home/darrien/chia-blockchain/ && . ./activate && chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n 1 -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
+  command += ` >> "${logFile}"`;
   return command;
 }
 

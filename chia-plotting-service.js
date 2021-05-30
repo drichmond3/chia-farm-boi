@@ -1,5 +1,5 @@
 const buildPlottingCommandsForDrive = require ("./chia-plot-delegation");
-const {findPlottableDrives, sleep, generatePlotCommand} = require('./chia-utils');
+const {findPlottableDrives, sleep, generatePlotCommand, getDriveFreeSpace} = require('./chia-utils');
 const { exec } = require('child_process');
 const { log } = require('./command-line-utils');
 const SSDManager = require('./ssd-manager');
@@ -25,17 +25,27 @@ module.exports = class PlottingService {
 			if(this._cpuThreadLimit <= this._ssdManagers.reduce((total, manager)=>total + manager.threadCount, 0)){
 				continue;	
 			}
-			let ssdManager = Object.keys(this._ssdManagers).find(ssdLocation=>(
-				this._ssdManagers[ssdLocation].isFull == false;
+			let ssdManagerLocation = Object.keys(this._ssdManagers).find(ssdLocation=>(
+				this._ssdManagers[ssdLocation].isFull == false
 			));
-			let destination = this._destinationDrives.find(this._getProjectedSpace(drive.location) > 130);
-			if(!ssdManager || !destination){
+			let destination = undefined;
+			for(let driveIndex in this._destinationDrives){
+				const drive = this._destinationDrives[driveIndex];
+				const spaceRemaining = await this._getProjectedSpace(drive.location)
+				if(spaceRemaining > 130){
+					destination = drive;
+					break;
+				}
+			}
+
+			if(!ssdManagerLocation || !destination){
 				continue;
 			}
+			let ssdManager = this._ssdManagers[ssdManagerLocation];
 
 			let executionId = this._getExecutionId();
 			let logFile = destination.logDirectory + "/" + executionId + ".log";
-			ssdManager.plot(destination.location, logFile, executionId, {success: _onPlotSuccess.bind(this, destination), failure: destination.callback.failure}); 
+			ssdManager.plot(destination.location, logFile, executionId, {success: this._onPlotSuccess.bind(this, destination), failure: destination.callback.failure}); 
 			destination.callback.start()
 
 			let sleepTimeInMilliseconds = this._delayInMinutes * 60 * 1000;
@@ -44,9 +54,9 @@ module.exports = class PlottingService {
 	}
 
 	addDestinationDrive(location, logDirectory, start, success, failure){
-		start = start || ()=>{};
-		failure = failure || ()=>{};
-		success = success || ()=>{};
+		start = start || (()=>{});
+		failure = failure || (()=>{});
+		success = success || (()=>{});
 		if(!(location in this._destinationDrives)){
 			this._destinationDrives.push({location, logDirectory, callback : {start, success, failure}}); 
 		}
@@ -78,9 +88,9 @@ module.exports = class PlottingService {
 		return this._executionId;
 	}
 
-	_getProjectedSpace(location){
-		let projectedSpace = getDriveFreeSpace(location) - getThreadCountForDrive(location)*PLOT_SIZE*1000;
-		console.log("Projected freespace for drive " + location + " is " + projectedSpace + " GB");
+	async _getProjectedSpace(location){
+		let projectedSpace = (await getDriveFreeSpace(location)) - this.getThreadCountForDrive(location)*PLOT_SIZE*1000;
+		return projectedSpace;
 	}
 
 }

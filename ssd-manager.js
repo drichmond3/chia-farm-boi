@@ -1,5 +1,5 @@
 const {generatePlotCommand} = require('./chia-utils');
-const {runCommand} = require('./command-line-utils');
+const {runCommand, log} = require('./command-line-utils');
 module.exports = class SSDManager{
 
 	constructor(ssd, maxThreads)
@@ -12,26 +12,27 @@ module.exports = class SSDManager{
 	async plot(destinationDrive, logFile, id, callbacks){
 		let command = undefined;
 		try{
-			this._inProgress[destinationDrive] = this._inProgress[destinationDrive] || {};
+			this._inProgress[destinationDrive] = this._inProgress[destinationDrive] || [];
 			this._inProgress[destinationDrive].push(id);
-			command = generatePlotCommand({temporaryDrive : ssd, destinationDrive, logFile});
+			command = generatePlotCommand({temporaryDrive : this._ssd, destinationDrive, logFile});
 			await runCommand(command)
 			callbacks.success();
 		}
 		catch(e){
-			log("Plotting to drive " + destinationDrive + " from ssd " + ssd + " failed.");
+			log("Plotting to drive " + destinationDrive + " from ssd " + this._ssd + " failed.");
 			log("Failed to execute command " + command);
 			log(e.message);
 			log(e.stackTrace);
+			console.log(e);
 			callbacks.failure();
 		}
 		finally{
-			this._inProgress.splice(this._inProgress.indexOf(id), 1);	
+			this._inProgress[destinationDrive].splice(this._inProgress[destinationDrive].indexOf(id), 1);	
 		}
 	}
 
 	getThreadCountForDrive(drive){
-		return this._inProgress[drive].length;
+		return this._inProgress[drive] ? this._inProgress[drive].length : 0;
 	}
 
 	get isFull(){
@@ -39,6 +40,6 @@ module.exports = class SSDManager{
 	}
 
 	get threadCount(){
-		return Object.keys(this._inProgress).reduce((total,drive)=>total+this._inProgress[drive].length);
+		return Object.keys(this._inProgress).reduce((total,drive)=>total+this._inProgress[drive].length, 0);
 	}
 }

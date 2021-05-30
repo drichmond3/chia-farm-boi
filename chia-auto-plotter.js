@@ -7,7 +7,6 @@ let {
 	PLOTTING_DELAY_IN_MINUTES, 
 	MAX_RETRY_ATTEMPTS, 
 	CORE_COUNT, 
-	MAX_THREADS_PER_SSD,
 	KNOWN_DRIVES, 
 	MAIL_FROM_ADDRESS, 
 	MAIL_TO_ADDRESS, 
@@ -27,7 +26,7 @@ let plotsInProgress = {};
 let main = async ()=>{
 	log("Beginning chia auto plotter");
 	console.log("Beginning chia auto plotter");
-	console.log("Max concurrent threads " + MAX_CONCURRENT_THREADS);
+	console.log("Max concurrent threads " + CORE_COUNT);
 	service = new PlottingService(TEMPORARY_DRIVES);
 	service.execute(PLOTTING_DELAY_IN_MINUTES, CORE_COUNT);
 	repl();
@@ -82,7 +81,7 @@ let driveDiscovery = async (questionTimeout)=> {
 			}
 		}
 	}
-  return (commandsByPlottableDrives && (Object.keys(commandsByPlottableDrives) != 0));
+  return plottableDrives && plottableDrives.length > 0;
 }
 
 let printStatus = async ()=> {
@@ -94,7 +93,7 @@ let printStatus = async ()=> {
 		let timeSpentInMilliseconds = drivePlottingData.startTime ? Date.now() - drivePlottingData.startTime : 0;
 
 		let plotRate = completedPlots / timeSpentInMilliseconds;
-		let freeSpace = getDriveFreeSpace(drive);
+		let freeSpace = await getDriveFreeSpace(drive);
 		let remainingPlots = freeSpace / PLOT_SIZE;
 
 		let timeRemainingInMilliseconds = remainingPlots / plotRate;
@@ -130,11 +129,7 @@ let cleanupThread = async ()=>{
 			if(drivePlot.failureCount >= MAX_RETRY_ATTEMPTS){
 				let message = `drive  ${unixDeviceFile} at ${drivePlot.location} has exceeded the maximum number of allowed failure plots. Manual override required to continue retrying.`;
 				log(message);
-				sendNotification(`${getHostname} Drive Failed`, message);
-			}
-			
-			if(!drivePlot.emailSent && Object.keys(drivePlot.commandsLeft) == 0){
-				completeDrivePlot(unixDeviceFile);
+				sendNotification(`${getHostname()} Drive Failed`, message);
 			}
 		}
 		await sleep(1000);
@@ -180,7 +175,7 @@ let getDrivesToSkip = async ()=>{
 		driveToUniqueId[unixDeviceFile] = await getDriveUniqueId(unixDeviceFile);
 	}
 
-	let inProgressDrives = [...Object.keys(plotsInProgress).filter(driveKey=>plotsInProgress[driveKey].retryFlag == false)]
+	let inProgressDrives = [...Object.keys(plotsInProgress)]
 	let verifiedInProgressDrives = inProgressDrives.filter(drive=>driveToUniqueId[drive] == plotsInProgress[drive].uniqueId);
 	return [...KNOWN_DRIVES, ...verifiedInProgressDrives]; 
 }
@@ -190,13 +185,12 @@ let plotToDrive = async (unixDeviceFile, baseLogDirectory, location)=>{
 		log( `Plotting to ${unixDeviceFile} at ${location}` );
 		let driveUniqueId = await getDriveUniqueId(unixDeviceFile);
 		let cleanedDriveName = location.substring(location.lastIndexOf("/")).replace(":","");
-		let logDirectory = baseLogDirectory + "/" + cleanedDriveName;
+		let logDirectory = baseLogDirectory + cleanedDriveName;
 		createDirectory(logDirectory);
 		plotsInProgress[unixDeviceFile] = {
 			uniqueId: driveUniqueId,
 			location,
 			logDirectory,
-			completedPlots: 0,
 			startTime: null
 		}
 		let start = ()=>plotsInProgress[unixDeviceFile].startTime = Date.now();
@@ -210,7 +204,7 @@ let plotToDrive = async (unixDeviceFile, baseLogDirectory, location)=>{
 
 let buildCommandCallback = (unixDeviceFileName, commandId) => {
 	return ()=>{
-		plotsInProgress[unixDeviceFileName].completedPlots++;
+		completeDrivePlot(unixDeviceFile);
 	}
 }
 
@@ -223,8 +217,6 @@ let buildCommandFailureCallback = (unixDeviceFileName, commandId) => {
 			log(e.stackTrace);
 		}
 	}
-
-}
 
 }
 
