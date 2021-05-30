@@ -1,12 +1,13 @@
 const {generatePlotCommand} = require('./chia-utils');
-const {runCommand, log} = require('./command-line-utils');
+const {runCommand, log, sleep} = require('./command-line-utils');
 module.exports = class SSDManager{
 
 	constructor(ssd, maxThreads)
 	{
 		this._ssd = ssd;
 		this._inProgress = {};
-		this._maxThreads = maxThreads;
+		this._maxThreads = parseInt(maxThreads);
+		log(`new ssd manager ${ssd} with ${maxThreads} threads`);
 	}
 
 	async plot(destinationDrive, logFile, id, callbacks){
@@ -15,7 +16,8 @@ module.exports = class SSDManager{
 			this._inProgress[destinationDrive] = this._inProgress[destinationDrive] || [];
 			this._inProgress[destinationDrive].push(id);
 			command = generatePlotCommand({temporaryDrive : this._ssd, destinationDrive, logFile});
-			await runCommand(command)
+			log(`Plotting to ${destinationDrive} on ${this._ssd} using this command: ${command}`);
+			await runCommand(command);
 			callbacks.success();
 		}
 		catch(e){
@@ -23,7 +25,6 @@ module.exports = class SSDManager{
 			log("Failed to execute command " + command);
 			log(e.message);
 			log(e.stackTrace);
-			console.log(e);
 			callbacks.failure();
 		}
 		finally{

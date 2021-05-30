@@ -6,12 +6,13 @@ const SSDManager = require('./ssd-manager');
 
 const KNOWN_DRIVES = ['/dev/sdb2', '/dev/sdb1'];
 const PLOT_SIZE = .1089 //measured in terabytes
+const SSD_PLOT_SIZE = .25;
 
 module.exports = class PlottingService {
 	constructor(ssds, delayInMinutes, cpuThreadLimit){
 		this._running = false;
 		this._ssds = ssds;
-		this._ssdManagers = ssds.map(ssd=> new SSDManager(ssd.location, ssd.freeSpace/PLOT_SIZE));
+		this._ssdManagers = ssds.map(ssd=> new SSDManager(ssd.location, parseInt(ssd.freeSpace/SSD_PLOT_SIZE)));
 		this._destinationDrives = [];
 		this._executionId = 0;
 		this._delayInMinutes = delayInMinutes;
@@ -21,8 +22,8 @@ module.exports = class PlottingService {
 	async execute() {
 		this._running = true;
 		while(this._running) {
-			await sleep(10*1000);
 			if(this._cpuThreadLimit <= this._ssdManagers.reduce((total, manager)=>total + manager.threadCount, 0)){
+				await sleep(10*1000);
 				continue;	
 			}
 			let ssdManagerLocation = Object.keys(this._ssdManagers).find(ssdLocation=>(
@@ -39,6 +40,7 @@ module.exports = class PlottingService {
 			}
 
 			if(!ssdManagerLocation || !destination){
+				await sleep(10*1000);
 				continue;
 			}
 			let ssdManager = this._ssdManagers[ssdManagerLocation];
@@ -47,7 +49,6 @@ module.exports = class PlottingService {
 			let logFile = destination.logDirectory + "/" + executionId + ".log";
 			ssdManager.plot(destination.location, logFile, executionId, {success: this._onPlotSuccess.bind(this, destination), failure: destination.callback.failure}); 
 			destination.callback.start()
-
 			let sleepTimeInMilliseconds = this._delayInMinutes * 60 * 1000;
 			await sleep(sleepTimeInMilliseconds);
 		}
@@ -75,6 +76,14 @@ module.exports = class PlottingService {
 
 	getThreadCountForDrive(location){
 		return this._ssdManagers.reduce((total,manager)=>total+manager.getThreadCountForDrive(location),0);
+	}
+
+	removeDrive(location){
+		let driveIndexToRemove = this._destinationDrives.findIndex(drive=>drive.location == location);
+		if(driveIndexToRemove >=0){
+			this._destinationDrives.splice(driveIndexToRemove, 1);
+			log("Removing drive from plotting service: " + location);
+		}
 	}
 
 	_onPlotSuccess(drive){

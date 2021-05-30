@@ -27,7 +27,7 @@ let main = async ()=>{
 	log("Beginning chia auto plotter");
 	console.log("Beginning chia auto plotter");
 	console.log("Max concurrent threads " + CORE_COUNT);
-	service = new PlottingService(TEMPORARY_DRIVES);
+	service = new PlottingService(TEMPORARY_DRIVES, PLOTTING_DELAY_IN_MINUTES, CORE_COUNT);
 	service.execute(PLOTTING_DELAY_IN_MINUTES, CORE_COUNT);
 	repl();
 	cleanupThread();
@@ -81,7 +81,7 @@ let driveDiscovery = async (questionTimeout)=> {
 			}
 		}
 	}
-  return plottableDrives && plottableDrives.length > 0;
+	return plottableDrives && plottableDrives.length > 0;
 }
 
 let printStatus = async ()=> {
@@ -126,23 +126,31 @@ let cleanupThread = async ()=>{
 	while(true){
 		for(let unixDeviceFile in plotsInProgress){
 			const drivePlot = plotsInProgress[unixDeviceFile];
-			if(drivePlot.failureCount >= MAX_RETRY_ATTEMPTS){
+			if(drivePlot.failureCount >= MAX_RETRY_ATTEMPTS && drivePlot.failed == false){
 				let message = `drive  ${unixDeviceFile} at ${drivePlot.location} has exceeded the maximum number of allowed failure plots. Manual override required to continue retrying.`;
+				log("--------------------------------------------------------------------------");
 				log(message);
-				sendNotification(`${getHostname()} Drive Failed`, message);
+				log("--------------------------------------------------------------------------");
+				sendNotification(`${getHostname()}'s Drive ${drivePlot.location} Failed`, message);
+				drivePlot.failed = true
+				drivePlot.finalized = true;
+				service.removeDrive(drivePlot.location);
 			}
 		}
-		await sleep(1000);
+		await sleep(20000);
 	}
 }
 
 let completeDrivePlot = (unixDeviceFile)=>{
 	const drivePlot = plotsInProgress[unixDeviceFile];
-	let message = `Drive ${unixDeviceFile} completed successfully`;
-	let subject = `Plotting Notification on ${getHostname()}`;
-	sendNotification(subject, message);
-	unmount(unixDeviceFile);
-	drivePlot.emailSent = true;
+	if(!drivePlot.finalized){
+		let message = `Drive ${unixDeviceFile} completed successfully`;
+		let subject = `Plotting Notification on ${getHostname()}`;
+		sendNotification(subject, message);
+		service.removeDrive(drivePlot.location);
+		unmount(unixDeviceFile);
+		drivePlot.finalized = true;
+	}
 }
 
 let sendNotification = (subject, message)=>{
@@ -191,7 +199,10 @@ let plotToDrive = async (unixDeviceFile, baseLogDirectory, location)=>{
 			uniqueId: driveUniqueId,
 			location,
 			logDirectory,
-			startTime: null
+			startTime: null,
+			failureCount: 0,
+			failed: false,
+			finalized: false
 		}
 		let start = ()=>plotsInProgress[unixDeviceFile].startTime = Date.now();
 		let success = buildCommandCallback(unixDeviceFile);

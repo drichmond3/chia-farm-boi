@@ -1,7 +1,8 @@
 const readline = require('readline');
 const {exec} = require("child_process");
 const fs = require('fs');
-var os = require("os");
+const {LOG_DIRECTORY} = require("./config.json");
+const os = require("os");
 
 function sleep(millis) {
 	return new Promise(resolve => setTimeout(resolve, millis));
@@ -67,7 +68,7 @@ function uuid() {
 	});
 }
 
-const LOG_FILE = `auto_plotter/${Date.now()}.log`;
+const LOG_FILE = `${LOG_DIRECTORY}/auto_plotter/${Date.now()}.log`;
 
 exports.sleep = sleep;
 exports.prompt = prompt;
