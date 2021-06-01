@@ -71,7 +71,7 @@ function sleep(millis) {
 let countCompletedPlots = async(directory) =>{
   let logs = "";
   try{
-    logs = await runCommand(`findStr "Copied final file from" "${directory}/*"`);
+    logs = await runCommand(`findStr "Copied" "${directory}/*"`);
   } catch(e){
     logs = "";
   }
