@@ -49,7 +49,7 @@ let countCompletedPlots = async(directory) =>{
     logs = "";
   }
   if(logs){
-    return rawDirectories.split(/\r?\n/).length;
+    return logs.split(/\r?\n/).length;
   }
   return 0;
 }

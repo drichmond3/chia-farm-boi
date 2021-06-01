@@ -59,13 +59,20 @@ let autoDiscoverRepl = async ()=>{
 	const infoMessage = "type stop to cancel auto-discovery...";
 	console.log(infoMessage);
 	while(autoDiscover){
-		let command = await prompt("", 5000, "plot");
-		if(command == "plot"){
-			await driveDiscovery(1000);
-		} else if(command == "stop"){
-			return true;
-		} else {
-			console.log(infoMessage);
+		try{
+			let command = await prompt("", 5000, "plot");
+			if(command == "plot"){
+				await driveDiscovery(1000);
+			} else if(command == "stop"){
+				return true;
+			} else {
+				console.log(infoMessage);
+			}
+		}
+		catch(e){
+			log(e);
+			e && e.message && log(e.message);
+			e && e.stackTrace && log(e.stackTrace);
 		}
 	}
 }
