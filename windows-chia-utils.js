@@ -1,4 +1,4 @@
-const {runCommand} = require("./command-line-utils");
+const {runCommand, log} = require("./command-line-utils");
 
 let findPlottableDrives = async (drivesToIgnore)=>{
 	const driveDataArray = await _getDriveData();
@@ -58,16 +58,29 @@ let createDirectory = async (directory) =>{
 }
 
 let generatePlotCommand = (options)=>{
-  let {temporaryDrive, destinationDrive, logDirectory, repeatCount, threadCount} = options
-  logDirectory = logDirectory.replace("/","\\").replace(":","");
-  let command = `chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n ${repeatCount} -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
-  command += ` >> ${logDirectory}\\${temporaryDrive.substring(temporaryDrive.lastIndexOf("/")).replace(":","") + '_' + threadCount}.log`;
+  let {temporaryDrive, destinationDrive, logFile, executionId} = options
+  let command = `chia plots create -k 32 -b 3500 -u 128 -t "${temporaryDrive}" -d "${destinationDrive}" -n 1 -r 4 -f b984301b7be7f37a0065de2796199f1b447a3ad462361403319bca5f365fbe201948e016382442f90fe499beeda55ea2 -p a97f014049ad33483eac1cea250b07351dbc65fd58c067cb49e743413761ce35dce88d96acc4ceb1e78e0273fbe634aa`
+  command += ` >> "${logFile}"`;
   return command;
 }
 
 function sleep(millis) {
 	return new Promise(resolve => setTimeout(resolve, millis));
 }
+
+let countCompletedPlots = async(directory) =>{
+  let logs = "";
+  try{
+    logs = await runCommand(`findStr "Copied final file from" "${directory}/*"`);
+  } catch(e){
+    logs = "";
+  }
+  if(logs){
+    return rawDirectories.split(/\r?\n/).length;
+  }
+  return 0;
+}
+
 
 /*Notes when adding a new m2 nvme drive: 
  * 1) find drive with sudo fdisk -l | grep "Disk /dev/nvme"
@@ -109,3 +122,4 @@ exports.listFilesInDirectory = listFilesInDirectory;
 exports.unmount = unmount
 exports.generatePlotCommand = generatePlotCommand;
 exports.createDirectory = createDirectory;
+exports.countCompletedPlots = countCompletedPlots;
