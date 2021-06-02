@@ -48,6 +48,7 @@ module.exports = class PlottingService {
 
 			let executionId = this._getExecutionId();
 			let logFile = destination.logDirectory + "/" + executionId + ".log";
+			let location = destination.location;
 			log(`Drive ${location} | Free Space ${await getDriveFreeSpace(location)} GB | Threads ${this.getThreadCountForDrive(location)} |` +
 				` In Progress ${this.getThreadCountForDrive(location)*PLOT_SIZE*1000} GB | Unallocated Space ${(await this._getProjectedSpace(location))}`);
 
