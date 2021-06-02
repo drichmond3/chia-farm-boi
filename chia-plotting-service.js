@@ -90,7 +90,7 @@ module.exports = class PlottingService {
 		}
 	}
 
-	_onPlotSuccess(drive){
+	async _onPlotSuccess(drive){
 		let freeSpace = await getDriveFreeSpace(drive.location);
 		log(`Completed plot for ${drive.location}, ${freeSpace} GB remaining`);
 		if(freeSpace <= FULL_SPACE_GB){
