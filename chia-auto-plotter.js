@@ -222,7 +222,7 @@ let plotToDrive = async (unixDeviceFile, baseLogDirectory, location)=>{
 
 let buildCommandCallback = (unixDeviceFileName, commandId) => {
 	return ()=>{
-		completeDrivePlot(unixDeviceFile);
+		completeDrivePlot(unixDeviceFileName);
 	}
 }
 

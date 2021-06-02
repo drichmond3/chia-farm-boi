@@ -7,6 +7,7 @@ const SSDManager = require('./ssd-manager');
 const KNOWN_DRIVES = ['/dev/sdb2', '/dev/sdb1'];
 const PLOT_SIZE = .1089 //measured in terabytes
 const SSD_PLOT_SIZE = .25;
+const FULL_SPACE_GB = 110;
 
 module.exports = class PlottingService {
 	constructor(ssds, delayInMinutes, cpuThreadLimit){
@@ -33,7 +34,7 @@ module.exports = class PlottingService {
 			for(let driveIndex in this._destinationDrives){
 				const drive = this._destinationDrives[driveIndex];
 				const spaceRemaining = await this._getProjectedSpace(drive.location)
-				if(spaceRemaining > 130){
+				if(spaceRemaining > FULL_SPACE_GB){
 					destination = drive;
 					break;
 				}
@@ -47,6 +48,9 @@ module.exports = class PlottingService {
 
 			let executionId = this._getExecutionId();
 			let logFile = destination.logDirectory + "/" + executionId + ".log";
+			log(`Drive ${location} | Free Space ${await getDriveFreeSpace(location)} GB | Threads ${this.getThreadCountForDrive(location)} |` +
+				` In Progress ${this.getThreadCountForDrive(location)*PLOT_SIZE*1000} GB | Unallocated Space ${(await this._getProjectedSpace(location))}`);
+
 			ssdManager.plot(destination.location, logFile, executionId, {success: this._onPlotSuccess.bind(this, destination), failure: destination.callback.failure}); 
 			destination.callback.start()
 			let sleepTimeInMilliseconds = this._delayInMinutes * 60 * 1000;
@@ -87,7 +91,9 @@ module.exports = class PlottingService {
 	}
 
 	_onPlotSuccess(drive){
-		if(getDriveFreeSpace(drive.location) <= 130){
+		let freeSpace = await getDriveFreeSpace(drive.location);
+		log(`Completed plot for ${drive.location}, ${freeSpace} GB remaining`);
+		if(freeSpace <= FULL_SPACE_GB){
 			drive.callback.success();
 		}
 	}
