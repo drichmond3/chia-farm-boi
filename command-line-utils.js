@@ -20,7 +20,6 @@ function prompt(query, timeout, defaultValue) {
 			setTimeout(()=>{
 				if(!completed){
 					completed = true;
-					print(LOG_FILE, "\r\nENDING EARLY DUE TO TIMEOUT OF " + timeout);
 					rl.close();
 					resolve(defaultValue);
 				}
