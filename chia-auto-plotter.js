@@ -187,18 +187,36 @@ let sendNotification = (subject, message)=>{
 let getDrivesToSkip = async ()=>{
 	let driveToUniqueId = {};
 	for(let unixDeviceFile in plotsInProgress){
-		driveToUniqueId[unixDeviceFile] = await getDriveUniqueId(unixDeviceFile);
+		try{
+			driveToUniqueId[unixDeviceFile] = await getDriveUniqueId(unixDeviceFile);
+		}
+		catch(e)
+		{
+			driveToUniqueId[unixDeviceFile] = null;
+			log("Failed to get unique id for drive " + unixDeviceFile + "]. Proceeding with assumption that we should skip/ignore this drive");
+			log(e.message);
+		}
 	}
 
 	let inProgressDrives = [...Object.keys(plotsInProgress)]
-	let verifiedInProgressDrives = inProgressDrives.filter(drive=>driveToUniqueId[drive] == plotsInProgress[drive].uniqueId);
+	let verifiedInProgressDrives = inProgressDrives.filter(drive=>{
+		return (driveToUniqueId[drive] == plotsInProgress[drive].uniqueId || driveToUniqueId[drive] == null)
+	});
 	return [...KNOWN_DRIVES, ...verifiedInProgressDrives]; 
 }
 
 let plotToDrive = async (unixDeviceFile, baseLogDirectory, location)=>{
 	try{
 		log( `Plotting to ${unixDeviceFile} at ${location}` );
-		let driveUniqueId = await getDriveUniqueId(unixDeviceFile);
+		let driveUniqueId = "unknown";
+		try{
+			driveUniqueId = await getDriveUniqueId(unixDeviceFile);
+		}
+		catch(e)
+		{
+			log("Failed to get unique id for drive " + unixDeviceFile + " using a default which will be overwritten when the unique id becomes available again");
+			log(e.message);
+		}
 		let cleanedDriveName = location.substring(location.lastIndexOf("/")).replace(":","");
 		let logDirectory = baseLogDirectory + cleanedDriveName;
 		createDirectory(logDirectory);
